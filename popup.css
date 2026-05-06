@@ -5,18 +5,18 @@
 }
 
 :root {
-  --bg: #0d0d0d;
-  --surface: #1a1a1a;
-  --border: rgba(255, 255, 255, 0.06);
-  --text: #ececec;
-  --text-muted: #6b7280;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
+  --bg: #1c1917;
+  --surface: #292524;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e7e5e4;
+  --text-muted: #a8a29e;
+  --primary: #da7756;
+  --primary-hover: #c4684a;
   --danger: #ef4444;
   --danger-bg: rgba(239, 68, 68, 0.1);
   --success: #10b981;
   --success-bg: rgba(16, 185, 129, 0.1);
-  --info-bg: rgba(79, 70, 229, 0.08);
+  --info-bg: rgba(218, 119, 86, 0.08);
   --radius: 12px;
 }
 
@@ -204,7 +204,7 @@ select.settings-input {
 
 .fetch-btn {
   background: transparent;
-  border: 1px solid rgba(139, 92, 246, 0.4);
+  border: 1px solid rgba(218, 119, 86, 0.4);
   color: var(--text);
   border-radius: 8px;
   padding: 8px 12px;
@@ -217,13 +217,13 @@ select.settings-input {
 .fetch-btn:hover {
   border-color: var(--primary);
   color: var(--primary);
-  background: rgba(139, 92, 246, 0.08);
+  background: rgba(218, 119, 86, 0.08);
 }
 
 .fetch-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  border-color: rgba(139, 92, 246, 0.2);
+  border-color: rgba(218, 119, 86, 0.2);
 }
 
 .settings-hint.success {
@@ -243,7 +243,7 @@ select.settings-input {
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+  background: linear-gradient(135deg, #e7e5e4 0%, #a8a29e 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -270,7 +270,7 @@ select.settings-input {
 #summarize-btn:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 6px 20px rgba(218, 119, 86, 0.35);
 }
 
 #summarize-btn:active {
@@ -302,7 +302,7 @@ select.settings-input {
   align-items: flex-start;
   gap: 12px;
   background: var(--info-bg);
-  border: 1px solid rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(218, 119, 86, 0.15);
   border-radius: var(--radius);
   padding: 14px 16px;
   color: var(--text-muted);
@@ -464,8 +464,8 @@ select.settings-input {
 
 .copy-btn {
   width: 100%;
-  background: rgba(79, 70, 229, 0.15);
-  border: 1px solid rgba(79, 70, 229, 0.3);
+  background: rgba(218, 119, 86, 0.12);
+  border: 1px solid rgba(218, 119, 86, 0.3);
   color: var(--primary);
   padding: 10px;
   border-radius: var(--radius);
@@ -535,7 +535,7 @@ select.settings-input {
 .full-chat-btn:hover {
   border-color: var(--primary);
   color: var(--primary);
-  background: rgba(139, 92, 246, 0.06);
+  background: rgba(218, 119, 86, 0.06);
 }
 
 /* Full Chat section */
