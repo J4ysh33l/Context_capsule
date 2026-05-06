@@ -22,8 +22,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const settingsBtn = document.getElementById("settings-btn");
   const settingsSection = document.getElementById("settings-section");
   const settingsBackBtn = document.getElementById("settings-back-btn");
+  const providerSelect = document.getElementById("provider-select");
+  const apiKeyRow = document.getElementById("api-key-row");
+  const apiKeyInput = document.getElementById("api-key-input");
+  const apiKeyHint = document.getElementById("api-key-hint");
+  const baseUrlRow = document.getElementById("base-url-row");
+  const baseUrlInput = document.getElementById("base-url-input");
+  const modelRow = document.getElementById("model-row");
   const modelSelect = document.getElementById("model-select");
-  const geminiKeyInput = document.getElementById("gemini-key-input");
+  const fetchModelsBtn = document.getElementById("fetch-models-btn");
+  const modelStatus = document.getElementById("model-status");
   const saveKeysBtn = document.getElementById("save-keys-btn");
   const clearKeysBtn = document.getElementById("clear-keys-btn");
   const keyStatus = document.getElementById("key-status");
@@ -372,58 +380,191 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ───── Settings ─────
-  async function loadSettings() {
-    const data = await chrome.storage.local.get([
-      "geminiApiKey",
-      "selectedModel",
-    ]);
-    if (data.geminiApiKey) geminiKeyInput.value = data.geminiApiKey;
-    modelSelect.value = data.selectedModel || "gemma-4-26b-a4b-it";
+
+  const PROVIDER_CONFIGS = {
+    worker:   { needsKey: false, needsUrl: false, defaultModels: [] },
+    gemini:   { needsKey: true,  needsUrl: false, hint: 'Get key at aistudio.google.com', defaultModels: ['gemma-4-26b-a4b-it', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'] },
+    openai:   { needsKey: true,  needsUrl: false, hint: 'Get key at platform.openai.com', defaultUrl: 'https://api.openai.com/v1', defaultModels: ['gpt-4.1-mini', 'gpt-4.1', 'gpt-4o'] },
+    groq:     { needsKey: true,  needsUrl: false, hint: 'Get key at console.groq.com',   defaultUrl: 'https://api.groq.com/openai/v1', defaultModels: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'] },
+    lmstudio: { needsKey: false, needsUrl: true,  hint: 'No key needed for local',        defaultUrl: 'http://localhost:1234/v1', defaultModels: [] },
+  };
+
+  function applyProviderUI(provider, cfg) {
+    const config = PROVIDER_CONFIGS[provider] || {};
+    // API key row
+    if (config.needsKey) {
+      apiKeyRow.classList.remove('hidden');
+      apiKeyHint.textContent = config.hint || '';
+    } else if (config.needsUrl) {
+      apiKeyRow.classList.remove('hidden');
+      apiKeyHint.textContent = config.hint || '';
+    } else {
+      apiKeyRow.classList.add('hidden');
+    }
+    // Base URL row
+    if (config.needsUrl) {
+      baseUrlRow.classList.remove('hidden');
+      if (!baseUrlInput.value) baseUrlInput.value = cfg?.baseUrl || config.defaultUrl || '';
+    } else {
+      baseUrlRow.classList.add('hidden');
+    }
+    // Model row
+    if (provider === 'worker') {
+      modelRow.classList.add('hidden');
+    } else {
+      modelRow.classList.remove('hidden');
+      populateDefaultModels(provider, cfg?.model);
+    }
   }
+
+  function populateDefaultModels(provider, selectedModel) {
+    const config = PROVIDER_CONFIGS[provider] || {};
+    modelSelect.innerHTML = '';
+    config.defaultModels.forEach((m) => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      modelSelect.appendChild(opt);
+    });
+    if (!config.defaultModels.length) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'Click Fetch to load models';
+      modelSelect.appendChild(opt);
+    }
+    if (selectedModel) {
+      // ensure selected model is in list (may be fetched model not in defaults)
+      if (!Array.from(modelSelect.options).find((o) => o.value === selectedModel)) {
+        const opt = document.createElement('option');
+        opt.value = selectedModel;
+        opt.textContent = selectedModel;
+        modelSelect.insertBefore(opt, modelSelect.firstChild);
+      }
+      modelSelect.value = selectedModel;
+    } else if (config.defaultModels.length) {
+      modelSelect.value = config.defaultModels[0];
+    }
+  }
+
+  async function loadSettings() {
+    const data = await chrome.storage.local.get(['activeProvider', 'providers', 'geminiApiKey', 'selectedModel']);
+
+    // Migrate legacy keys
+    if (!data.activeProvider && data.geminiApiKey) {
+      const migrated = {
+        activeProvider: 'gemini',
+        providers: { gemini: { apiKey: data.geminiApiKey, model: data.selectedModel || 'gemma-4-26b-a4b-it' } },
+      };
+      await chrome.storage.local.set(migrated);
+      await chrome.storage.local.remove(['geminiApiKey', 'selectedModel']);
+      data.activeProvider = migrated.activeProvider;
+      data.providers = migrated.providers;
+      logger.info('popup', 'Migrated legacy Gemini key to new provider schema');
+    }
+
+    const activeProvider = data.activeProvider || 'worker';
+    const providers = data.providers || {};
+    const cfg = providers[activeProvider] || {};
+
+    providerSelect.value = activeProvider;
+    apiKeyInput.value = cfg.apiKey || '';
+    baseUrlInput.value = cfg.baseUrl || PROVIDER_CONFIGS[activeProvider]?.defaultUrl || '';
+    applyProviderUI(activeProvider, cfg);
+  }
+
+  providerSelect.addEventListener('change', () => {
+    const provider = providerSelect.value;
+    apiKeyInput.value = '';
+    baseUrlInput.value = PROVIDER_CONFIGS[provider]?.defaultUrl || '';
+    applyProviderUI(provider, null);
+  });
+
+  fetchModelsBtn.addEventListener('click', async () => {
+    const provider = providerSelect.value;
+    const apiKey = apiKeyInput.value.trim();
+    const baseUrl = baseUrlInput.value.trim() || PROVIDER_CONFIGS[provider]?.defaultUrl || '';
+
+    fetchModelsBtn.disabled = true;
+    fetchModelsBtn.textContent = '...';
+    modelStatus.textContent = 'Fetching models...';
+    modelStatus.className = 'settings-hint';
+    modelStatus.classList.remove('hidden');
+
+    const result = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'fetchModels', provider, baseUrl, apiKey }, resolve);
+    });
+
+    fetchModelsBtn.disabled = false;
+    fetchModelsBtn.textContent = 'Fetch';
+
+    if (!result?.success) {
+      modelStatus.textContent = result?.error || 'Failed to fetch models.';
+      modelStatus.className = 'settings-hint error';
+      return;
+    }
+
+    modelSelect.innerHTML = '';
+    result.models.forEach((m) => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      modelSelect.appendChild(opt);
+    });
+    modelStatus.textContent = `${result.models.length} model(s) loaded.`;
+    modelStatus.className = 'settings-hint success';
+    setTimeout(() => modelStatus.classList.add('hidden'), 3000);
+    logger.info('popup', 'Models fetched', { provider, count: result.models.length });
+  });
 
   function showKeyStatus(msg, type) {
     keyStatus.textContent = msg;
     keyStatus.className = `key-status ${type}`;
-    setTimeout(() => keyStatus.classList.add("hidden"), 3000);
+    setTimeout(() => keyStatus.classList.add('hidden'), 3000);
   }
 
-  settingsBtn.addEventListener("click", () => {
+  settingsBtn.addEventListener('click', () => {
     hideAll();
-    settingsSection.classList.remove("hidden");
+    settingsSection.classList.remove('hidden');
     loadSettings();
   });
 
-  settingsBackBtn.addEventListener("click", () => {
+  settingsBackBtn.addEventListener('click', () => {
     hideAll();
-    readySection.classList.remove("hidden");
+    readySection.classList.remove('hidden');
   });
 
-  saveKeysBtn.addEventListener("click", async () => {
-    const geminiKey = geminiKeyInput.value.trim();
+  saveKeysBtn.addEventListener('click', async () => {
+    const provider = providerSelect.value;
+    const config = PROVIDER_CONFIGS[provider] || {};
+    const apiKey = apiKeyInput.value.trim();
+    const baseUrl = baseUrlInput.value.trim() || config.defaultUrl || '';
     const model = modelSelect.value;
 
-    if (!geminiKey) {
-      showKeyStatus("API key required.", "error");
+    if (config.needsKey && !apiKey) {
+      showKeyStatus('API key required.', 'error');
       return;
     }
-    if (!geminiKey.startsWith("AIza")) {
-      showKeyStatus('Key should start with "AIza".', "error");
+    if (provider === 'gemini' && apiKey && !apiKey.startsWith('AIza')) {
+      showKeyStatus('Gemini key should start with "AIza".', 'error');
       return;
     }
 
-    await chrome.storage.local.set({
-      geminiApiKey: geminiKey,
-      selectedModel: model,
-    });
-    logger.info("popup", "Settings saved", { model });
-    showKeyStatus("Settings saved.", "success");
+    const stored = await chrome.storage.local.get('providers');
+    const providers = stored.providers || {};
+    providers[provider] = { apiKey, baseUrl, model };
+
+    await chrome.storage.local.set({ activeProvider: provider, providers });
+    logger.info('popup', 'Settings saved', { provider, model });
+    showKeyStatus('Settings saved.', 'success');
   });
 
-  clearKeysBtn.addEventListener("click", async () => {
-    await chrome.storage.local.remove(["geminiApiKey", "selectedModel"]);
-    geminiKeyInput.value = "";
-    modelSelect.value = "gemma-4-26b-a4b-it";
-    logger.info("popup", "Settings cleared");
-    showKeyStatus("Cleared. Falling back to shared Worker API.", "success");
+  clearKeysBtn.addEventListener('click', async () => {
+    await chrome.storage.local.remove(['activeProvider', 'providers', 'geminiApiKey', 'selectedModel']);
+    providerSelect.value = 'worker';
+    apiKeyInput.value = '';
+    baseUrlInput.value = '';
+    applyProviderUI('worker', null);
+    logger.info('popup', 'Settings cleared');
+    showKeyStatus('Cleared. Using shared Worker API.', 'success');
   });
 });

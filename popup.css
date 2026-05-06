@@ -192,6 +192,46 @@ select.settings-input {
   color: var(--danger);
 }
 
+.model-row-inline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.model-row-inline .settings-input {
+  flex: 1;
+}
+
+.fetch-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.fetch-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.fetch-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-hint.success {
+  color: var(--success);
+}
+
+.settings-hint.error {
+  color: var(--danger);
+}
+
 .logo-icon {
   color: var(--primary);
   font-size: 16px;

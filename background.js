@@ -1,5 +1,5 @@
 // background.js
-// Receives extracted text from popup and routes to user-keyed Gemini API or shared Worker
+// Receives extracted text from popup and routes to configured provider or shared Worker
 
 importScripts('logger.js');
 
@@ -17,17 +17,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       platform: message.platform,
     });
     handleSummarize(message.text, message.platform).then(sendResponse);
-    return true; // Keep channel open for async response
+    return true;
+  }
+  if (message.action === 'fetchModels') {
+    fetchModels(message.provider, message.baseUrl, message.apiKey).then(sendResponse);
+    return true;
   }
 });
 
 async function handleSummarize(conversationText, platform = 'chatgpt') {
-  const stored = await chrome.storage.local.get(['geminiApiKey', 'selectedModel']);
+  const stored = await chrome.storage.local.get(['activeProvider', 'providers', 'geminiApiKey', 'selectedModel']);
 
-  if (stored.geminiApiKey) {
-    const model = stored.selectedModel || 'gemma-4-26b-a4b-it';
-    logger.info('background', 'Routing to Google AI Studio direct', { model });
-    return callGeminiDirect(conversationText, stored.geminiApiKey, model);
+  const activeProvider = stored.activeProvider || (stored.geminiApiKey ? 'gemini' : null);
+  const providers = stored.providers || {};
+
+  if (activeProvider === 'gemini') {
+    const apiKey = providers.gemini?.apiKey || stored.geminiApiKey;
+    const model = providers.gemini?.model || stored.selectedModel || 'gemma-4-26b-a4b-it';
+    logger.info('background', 'Routing to Gemini direct', { model });
+    return callGeminiDirect(conversationText, apiKey, model);
+  }
+
+  if (['openai', 'groq', 'lmstudio'].includes(activeProvider)) {
+    const cfg = providers[activeProvider] || {};
+    logger.info('background', 'Routing to OpenAI-compatible provider', { provider: activeProvider, model: cfg.model });
+    return callOpenAIDirect(conversationText, cfg.baseUrl, cfg.apiKey, cfg.model);
   }
 
   logger.info('background', 'Routing to shared Worker API', { platform });
@@ -74,18 +88,85 @@ async function callGeminiDirect(conversationText, apiKey, model) {
     }
 
     const capsule = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!capsule) {
-      return { success: false, error: 'API returned empty response.' };
-    }
+    if (!capsule) return { success: false, error: 'API returned empty response.' };
 
     const originalTokens = data.usageMetadata?.promptTokenCount || estimateTokens(conversationText);
     const capsuleTokens = data.usageMetadata?.candidatesTokenCount || estimateTokens(capsule);
-    logger.info('background', 'Google AI direct success', { originalTokens, capsuleTokens, model });
+    logger.info('background', 'Gemini direct success', { originalTokens, capsuleTokens, model });
 
     return { success: true, capsule: capsule.trim(), originalTokens, capsuleTokens };
   } catch (err) {
-    logger.error('background', 'Google AI fetch failed', { error: err.message });
+    logger.error('background', 'Gemini fetch failed', { error: err.message });
     return { success: false, error: 'Could not reach Google AI API. Check connection.' };
+  }
+}
+
+async function callOpenAIDirect(conversationText, baseUrl, apiKey, model) {
+  const url = `${baseUrl}/chat/completions`;
+  const headers = { 'Content-Type': 'application/json' };
+  if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: BRIEFING_PROMPT + conversationText }],
+        temperature: 0.3,
+        max_tokens: 2048,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      logger.warn('background', 'OpenAI-compatible API error', { status: response.status, error: data.error });
+      const code = response.status;
+      let userMsg = data.error?.message || `API error (${code}).`;
+      if (code === 401) userMsg = 'Invalid API key. Check it in Settings.';
+      else if (code === 429) userMsg = 'Quota exceeded or rate limited. Check your account.';
+      else if (code === 404) userMsg = `Model "${model}" not found. Fetch models and reselect.`;
+      return { success: false, error: userMsg };
+    }
+
+    const capsule = data.choices?.[0]?.message?.content;
+    if (!capsule) return { success: false, error: 'API returned empty response.' };
+
+    const originalTokens = data.usage?.prompt_tokens || estimateTokens(conversationText);
+    const capsuleTokens = data.usage?.completion_tokens || estimateTokens(capsule);
+    logger.info('background', 'OpenAI-compatible success', { originalTokens, capsuleTokens, model });
+
+    return { success: true, capsule: capsule.trim(), originalTokens, capsuleTokens };
+  } catch (err) {
+    logger.error('background', 'OpenAI-compatible fetch failed', { error: err.message });
+    return { success: false, error: `Could not reach ${baseUrl}. Make sure it is running.` };
+  }
+}
+
+async function fetchModels(provider, baseUrl, apiKey) {
+  try {
+    if (provider === 'gemini') {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+      const data = await (await fetch(url)).json();
+      if (data.error) return { success: false, error: data.error.message };
+      const models = (data.models || [])
+        .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m) => ({ id: m.name.replace('models/', ''), name: m.displayName || m.name }));
+      return { success: true, models };
+    }
+
+    // OpenAI-compatible (openai, groq, lmstudio)
+    const headers = {};
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    const response = await fetch(`${baseUrl}/models`, { headers });
+    const data = await response.json();
+    if (!response.ok || data.error) return { success: false, error: data.error?.message || `Error (${response.status}).` };
+    const models = (data.data || []).map((m) => ({ id: m.id, name: m.id }));
+    return { success: true, models };
+  } catch (err) {
+    logger.error('background', 'fetchModels failed', { error: err.message });
+    return { success: false, error: `Could not reach endpoint: ${err.message}` };
   }
 }
 
@@ -109,10 +190,7 @@ async function callWorkerApi(conversationText, platform) {
         error: data.error,
         message: data.message,
       });
-      return {
-        success: false,
-        error: data.message || 'Worker API returned an error.',
-      };
+      return { success: false, error: data.message || 'Worker API returned an error.' };
     }
 
     logger.info('background', 'Worker API success', {
