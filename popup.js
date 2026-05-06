@@ -52,8 +52,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Check if current tab is a supported page
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const tabUrl = tab?.url || "";
-  const isChatGPT = tabUrl.includes("chatgpt.com");
-  const isClaude = tabUrl.includes("claude.ai");
+  const isChatGPT = /chatgpt\.com\/c\/|chatgpt\.com\/\?/.test(tabUrl) || (tabUrl.includes("chatgpt.com") && !tabUrl.includes("/help"));
+  const isClaude = /claude\.ai\/chat\/|claude\.ai\/\?/.test(tabUrl) || (tabUrl.includes("claude.ai") && !tabUrl.includes("/docs") && !tabUrl.includes("/help"));
   const isDeepSeek = tabUrl.includes("chat.deepseek.com");
   const isGrok =
     tabUrl.includes("grok.com") ||
