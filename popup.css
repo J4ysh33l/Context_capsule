@@ -204,8 +204,8 @@ select.settings-input {
 
 .fetch-btn {
   background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: var(--text);
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 12px;
@@ -217,11 +217,13 @@ select.settings-input {
 .fetch-btn:hover {
   border-color: var(--primary);
   color: var(--primary);
+  background: rgba(139, 92, 246, 0.08);
 }
 
 .fetch-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  border-color: rgba(139, 92, 246, 0.2);
 }
 
 .settings-hint.success {

@@ -537,7 +537,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const provider = providerSelect.value;
     const config = PROVIDER_CONFIGS[provider] || {};
     const apiKey = apiKeyInput.value.trim();
-    const baseUrl = baseUrlInput.value.trim() || config.defaultUrl || '';
+    const baseUrl = (config.needsUrl && baseUrlInput.value.trim()) || config.defaultUrl || '';
     const model = modelSelect.value;
 
     if (config.needsKey && !apiKey) {
@@ -554,6 +554,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     providers[provider] = { apiKey, baseUrl, model };
 
     await chrome.storage.local.set({ activeProvider: provider, providers });
+    // Remove legacy keys to prevent migration conflicts
+    await chrome.storage.local.remove(['geminiApiKey', 'selectedModel']);
     logger.info('popup', 'Settings saved', { provider, model });
     showKeyStatus('Settings saved.', 'success');
   });

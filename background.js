@@ -6,9 +6,10 @@ importScripts('logger.js');
 const WORKER_URL = 'https://contextcapsule-worker.contextcapsule-app.workers.dev/api/summarize';
 
 const BRIEFING_PROMPT =
-  'Create a dense, token-efficient context briefing from this AI conversation. ' +
-  'Preserve: key decisions, code, technical details, action items, and user intent. ' +
-  'Use structured format with clear sections. Be concise but complete.\n\nConversation:\n';
+  'You are a technical note-taker. Create a dense, token-efficient context briefing from the conversation below. ' +
+  'Extract and preserve: key decisions, code snippets, technical details, action items, user intent, and outcomes. ' +
+  'Use structured format with clear sections. Be concise but complete. Do not add external information.\n\n' +
+  'CONVERSATION:\n';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'summarize') {
