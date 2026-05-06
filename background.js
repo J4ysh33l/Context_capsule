@@ -57,31 +57,31 @@ function estimateTokens(text) {
 function extractBriefing(text) {
   if (!text) return text;
 
-  // Pass 1: find last "here's my final answer" marker, take everything after
-  const markerRe = /\*{0,2}(?:Refined\s+Structure|Draft|Final\s+(?:answer|version)?|Summary|Briefing|Clean\s+version)\s*:\*{0,2}\s*/gi;
-  const markerMatches = [...text.matchAll(markerRe)];
-  if (markerMatches.length > 0) {
-    const last = markerMatches[markerMatches.length - 1];
-    const extracted = text.slice(last.index + last[0].length).trim();
-    if (extracted.length > 100) return extracted;
-  }
+  let result = text;
 
-  // Pass 2: if response opens with meta-bullets, find last clean heading cluster
-  if (/^\*\s{1,3}(?:Input|Goal|Structure|Constraint|Topic|Check):/m.test(text.slice(0, 400))) {
-    const headingRe = /^(?:\*{2}[A-Z]|\#{1,3}\s+[A-Z])/gm;
-    const positions = [...text.matchAll(headingRe)].map((m) => m.index);
-    if (positions.length >= 2) {
-      let clusterStart = positions[positions.length - 1];
-      for (let i = positions.length - 2; i >= 0; i--) {
-        if (positions[i + 1] - positions[i] < 800) clusterStart = positions[i];
-        else break;
-      }
-      const extracted = text.slice(clusterStart).trim();
-      if (extracted.length > 100) return extracted;
+  // Pass 1: find last "**Key Decisions**" heading — start of the final briefing iteration
+  const kdRe = /(?:\*{2}Key\s+Decisions?\*{2}|\#{1,3}\s+Key\s+Decisions?)/gi;
+  const kdMatches = [...result.matchAll(kdRe)];
+  if (kdMatches.length > 0) {
+    result = result.slice(kdMatches[kdMatches.length - 1].index).trim();
+  } else {
+    // Fallback: known "final answer" markers
+    const markerRe = /\*{0,2}(?:Refined\s+Structure|Draft|Final\s+(?:answer|version|check|polish)?|Summary|Briefing|Clean\s+version|Revised\s+Plan)\s*:\*{0,2}\s*/gi;
+    const markerMatches = [...result.matchAll(markerRe)];
+    if (markerMatches.length > 0) {
+      const last = markerMatches[markerMatches.length - 1];
+      const extracted = result.slice(last.index + last[0].length).trim();
+      if (extracted.length > 100) result = extracted;
     }
   }
 
-  return text;
+  // Strip remaining inline thinking lines: italicised lines like "*Wait, ...*" or "*Self-correction: ...*"
+  result = result
+    .replace(/^\s*\*(?![* ])[^*\n]+\*\s*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return result.length > 50 ? result : text;
 }
 
 async function callGeminiDirect(conversationText, apiKey, model) {
