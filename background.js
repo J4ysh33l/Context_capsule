@@ -54,6 +54,36 @@ function estimateTokens(text) {
   return Math.round((text || '').length / 4);
 }
 
+function extractBriefing(text) {
+  if (!text) return text;
+
+  // Pass 1: find last "here's my final answer" marker, take everything after
+  const markerRe = /\*{0,2}(?:Refined\s+Structure|Draft|Final\s+(?:answer|version)?|Summary|Briefing|Clean\s+version)\s*:\*{0,2}\s*/gi;
+  const markerMatches = [...text.matchAll(markerRe)];
+  if (markerMatches.length > 0) {
+    const last = markerMatches[markerMatches.length - 1];
+    const extracted = text.slice(last.index + last[0].length).trim();
+    if (extracted.length > 100) return extracted;
+  }
+
+  // Pass 2: if response opens with meta-bullets, find last clean heading cluster
+  if (/^\*\s{1,3}(?:Input|Goal|Structure|Constraint|Topic|Check):/m.test(text.slice(0, 400))) {
+    const headingRe = /^(?:\*{2}[A-Z]|\#{1,3}\s+[A-Z])/gm;
+    const positions = [...text.matchAll(headingRe)].map((m) => m.index);
+    if (positions.length >= 2) {
+      let clusterStart = positions[positions.length - 1];
+      for (let i = positions.length - 2; i >= 0; i--) {
+        if (positions[i + 1] - positions[i] < 800) clusterStart = positions[i];
+        else break;
+      }
+      const extracted = text.slice(clusterStart).trim();
+      if (extracted.length > 100) return extracted;
+    }
+  }
+
+  return text;
+}
+
 async function callGeminiDirect(conversationText, apiKey, model) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const prompt = BRIEFING_PROMPT + conversationText;
@@ -89,14 +119,15 @@ async function callGeminiDirect(conversationText, apiKey, model) {
       return { success: false, error: userMsg };
     }
 
-    const capsule = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!capsule) return { success: false, error: 'API returned empty response.' };
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!raw) return { success: false, error: 'API returned empty response.' };
 
+    const capsule = extractBriefing(raw).trim();
     const originalTokens = data.usageMetadata?.promptTokenCount || estimateTokens(conversationText);
     const capsuleTokens = data.usageMetadata?.candidatesTokenCount || estimateTokens(capsule);
     logger.info('background', 'Gemini direct success', { originalTokens, capsuleTokens, model });
 
-    return { success: true, capsule: capsule.trim(), originalTokens, capsuleTokens };
+    return { success: true, capsule, originalTokens, capsuleTokens };
   } catch (err) {
     logger.error('background', 'Gemini fetch failed', { error: err.message });
     return { success: false, error: 'Could not reach Google AI API. Check connection.' };
@@ -132,14 +163,15 @@ async function callOpenAIDirect(conversationText, baseUrl, apiKey, model) {
       return { success: false, error: userMsg };
     }
 
-    const capsule = data.choices?.[0]?.message?.content;
-    if (!capsule) return { success: false, error: 'API returned empty response.' };
+    const raw = data.choices?.[0]?.message?.content;
+    if (!raw) return { success: false, error: 'API returned empty response.' };
 
+    const capsule = extractBriefing(raw).trim();
     const originalTokens = data.usage?.prompt_tokens || estimateTokens(conversationText);
     const capsuleTokens = data.usage?.completion_tokens || estimateTokens(capsule);
     logger.info('background', 'OpenAI-compatible success', { originalTokens, capsuleTokens, model });
 
-    return { success: true, capsule: capsule.trim(), originalTokens, capsuleTokens };
+    return { success: true, capsule, originalTokens, capsuleTokens };
   } catch (err) {
     logger.error('background', 'OpenAI-compatible fetch failed', { error: err.message });
     return { success: false, error: `Could not reach ${baseUrl}. Make sure it is running.` };

@@ -425,10 +425,10 @@
    */
   const RETRY_CONFIG = {
     MAX_ATTEMPTS: 3,
-    BASE_DELAY_MS: 400,   // attempt 1→2: 800ms, attempt 2→3: 1600ms
+    BASE_DELAY_MS: 250,   // attempt 1→2: 500ms, attempt 2→3: 1000ms
     JITTER_FACTOR: 0.2,   // ±20% of the delay
     MIN_SUCCESS_CHARS: 100,
-    SPA_WAIT_MS: 10000,   // per-attempt SPA polling cap
+    SPA_WAIT_MS: 5000,    // per-attempt SPA polling cap
   };
 
   function sleep(ms) {
@@ -461,7 +461,7 @@
         setTimeout(check, 500);
       }
       // Give the SPA an initial 1.5 s grace period before first check
-      setTimeout(check, 1500);
+      setTimeout(check, 750);
     });
   }
 

@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 "No conversation detected or extraction timed out. Please make sure the chat has messages and is fully loaded.",
               ),
             ),
-          20000,
+          12000,
         );
 
         chrome.tabs.sendMessage(
@@ -298,7 +298,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 "No conversation detected or extraction timed out. Please make sure the chat has messages and is fully loaded.",
               ),
             ),
-          20000,
+          12000,
         );
         chrome.tabs.sendMessage(
           tab.id,
