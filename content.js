@@ -173,7 +173,7 @@
           ? Array.from(responses).map((r) => r.innerText?.trim()).filter(Boolean).join('\n')
           : el.innerText?.trim() ?? '';
       }
-      if (text.length > 10) turns.push(`[${isHuman ? 'human' : 'assistant'}]: ${text}`);
+      if (text.length > 0) turns.push(`[${isHuman ? 'human' : 'assistant'}]: ${text}`);
     });
     return turns.join('\n\n') || null;
   }
