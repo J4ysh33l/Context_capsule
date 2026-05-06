@@ -6,11 +6,11 @@ importScripts('logger.js');
 const WORKER_URL = 'https://contextcapsule-worker.contextcapsule-app.workers.dev/api/summarize';
 
 const SYSTEM_INSTRUCTION =
-  'You are a context compressor. When given a conversation, write a concise briefing covering: ' +
-  'key decisions, technical details, action items, and outcomes. ' +
-  'Start writing the briefing immediately — no preamble, no labels, no meta-commentary.';
+  'You are a context compressor. Output a concise briefing. ' +
+  'Write the briefing text directly. No bullet-point reasoning, no step-by-step analysis, no Draft: label. ' +
+  'Just the final briefing, starting immediately.';
 
-const BRIEFING_PROMPT = 'Summarize this conversation:\n\n';
+const BRIEFING_PROMPT = 'Summarize this conversation into a briefing:\n\n';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'summarize') {
@@ -54,6 +54,19 @@ function estimateTokens(text) {
   return Math.round((text || '').length / 4);
 }
 
+function extractBriefing(text) {
+  if (!text) return text;
+  // Strip Gemini thinking-mode preamble: find last "Draft:" or "Summary:" marker and take everything after it
+  const draftMatch = text.match(/\*{0,2}(?:Draft|Final answer|Summary|Briefing)\s*:\*{0,2}\s*/gi);
+  if (draftMatch) {
+    const lastMarker = draftMatch[draftMatch.length - 1];
+    const idx = text.lastIndexOf(lastMarker);
+    const extracted = text.slice(idx + lastMarker.length).trim();
+    if (extracted.length > 100) return extracted;
+  }
+  return text;
+}
+
 async function callGeminiDirect(conversationText, apiKey, model) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -64,7 +77,7 @@ async function callGeminiDirect(conversationText, apiKey, model) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
         contents: [{ parts: [{ text: BRIEFING_PROMPT + conversationText }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
       }),
     });
 
@@ -89,14 +102,15 @@ async function callGeminiDirect(conversationText, apiKey, model) {
       return { success: false, error: userMsg };
     }
 
-    const capsule = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!capsule) return { success: false, error: 'API returned empty response.' };
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!raw) return { success: false, error: 'API returned empty response.' };
 
+    const capsule = extractBriefing(raw).trim();
     const originalTokens = data.usageMetadata?.promptTokenCount || estimateTokens(conversationText);
     const capsuleTokens = data.usageMetadata?.candidatesTokenCount || estimateTokens(capsule);
     logger.info('background', 'Gemini direct success', { originalTokens, capsuleTokens, model });
 
-    return { success: true, capsule: capsule.trim(), originalTokens, capsuleTokens };
+    return { success: true, capsule, originalTokens, capsuleTokens };
   } catch (err) {
     logger.error('background', 'Gemini fetch failed', { error: err.message });
     return { success: false, error: 'Could not reach Google AI API. Check connection.' };
@@ -135,14 +149,15 @@ async function callOpenAIDirect(conversationText, baseUrl, apiKey, model) {
       return { success: false, error: userMsg };
     }
 
-    const capsule = data.choices?.[0]?.message?.content;
-    if (!capsule) return { success: false, error: 'API returned empty response.' };
+    const raw = data.choices?.[0]?.message?.content;
+    if (!raw) return { success: false, error: 'API returned empty response.' };
 
+    const capsule = extractBriefing(raw).trim();
     const originalTokens = data.usage?.prompt_tokens || estimateTokens(conversationText);
     const capsuleTokens = data.usage?.completion_tokens || estimateTokens(capsule);
     logger.info('background', 'OpenAI-compatible success', { originalTokens, capsuleTokens, model });
 
-    return { success: true, capsule: capsule.trim(), originalTokens, capsuleTokens };
+    return { success: true, capsule, originalTokens, capsuleTokens };
   } catch (err) {
     logger.error('background', 'OpenAI-compatible fetch failed', { error: err.message });
     return { success: false, error: `Could not reach ${baseUrl}. Make sure it is running.` };
