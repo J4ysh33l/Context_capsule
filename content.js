@@ -157,15 +157,25 @@
    * Strategy A: data-testid for human-turn and ai-turn containers (Anthropic's stable test IDs).
    */
   function claudeStrategyA() {
-    const els = getContext().querySelectorAll(
-      '[data-testid="human-turn"], [data-testid="ai-turn"], ' +
-      '[data-testid="user-message"], [data-testid="ai-response"]'
-    );
+    // New DOM: outer turn containers only — avoids double-capture of nested user-message/ai-turn children
+    const els = getContext().querySelectorAll('[data-testid="human-turn"], [data-testid="ai-turn"]');
     if (!els.length) return null;
-    return collectText(els, (el) => {
-      const tid = el.dataset.testid ?? '';
-      return (tid.includes('human') || tid.includes('user')) ? 'human' : 'assistant';
+    const turns = [];
+    Array.from(els).forEach((el) => {
+      const isHuman = (el.dataset.testid ?? '').includes('human');
+      let text;
+      if (isHuman) {
+        const userMsg = el.querySelector('[data-testid="user-message"]');
+        text = (userMsg ?? el).innerText?.trim() ?? '';
+      } else {
+        const responses = el.querySelectorAll('.font-claude-response');
+        text = responses.length
+          ? Array.from(responses).map((r) => r.innerText?.trim()).filter(Boolean).join('\n')
+          : el.innerText?.trim() ?? '';
+      }
+      if (text.length > 10) turns.push(`[${isHuman ? 'human' : 'assistant'}]: ${text}`);
     });
+    return turns.join('\n\n') || null;
   }
 
   /**
@@ -173,15 +183,12 @@
    * handles obfuscated but still semantically named classes.
    */
   function claudeStrategyB() {
-    const els = getContext().querySelectorAll(
-      '.font-claude-message, [class*="human-turn"], [class*="HumanTurn"], ' +
-      '[class*="AssistantMessage"], [class*="assistant-message"], [class*="UserMessage"]'
-    );
+    // Old DOM (no outer turn containers): user-message testid + font-claude-response class, interleaved by DOM order
+    const els = getContext().querySelectorAll('[data-testid="user-message"], .font-claude-response');
     if (!els.length) return null;
     const turns = [];
     Array.from(els).forEach((el) => {
-      const cls = el.className ?? '';
-      const isHuman = cls.includes('human') || cls.includes('Human') || cls.includes('User') || cls.includes('user');
+      const isHuman = el.matches('[data-testid="user-message"]');
       const text = el.innerText?.trim() ?? '';
       if (text.length > 10) turns.push(`[${isHuman ? 'human' : 'assistant'}]: ${text}`);
     });
