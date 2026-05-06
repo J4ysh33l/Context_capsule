@@ -77,7 +77,7 @@ async function callGeminiDirect(conversationText, apiKey, model) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
         contents: [{ parts: [{ text: BRIEFING_PROMPT + conversationText }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
       }),
     });
 
