@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Summarize ChatGPT and Claude conversations into token-efficient context briefings." />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">ContextCapsule</span>
+      </div>
+      <button id="settings-btn" class="settings-btn" title="Settings">⚙</button>
+    </header>
+
+    <!-- Settings panel -->
+    <div id="settings-section" class="hidden">
+      <div class="settings-panel">
+        <p class="settings-desc">Use your own API key to bypass the shared quota.</p>
+
+        <label class="settings-label" for="model-select">Model</label>
+        <select id="model-select" class="settings-input">
+          <option value="gemma-4-26b-a4b-it">Gemma 4 26B A4B (default)</option>
+          <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+        </select>
+
+        <label class="settings-label" for="gemini-key-input">Google AI Studio API Key</label>
+        <input id="gemini-key-input" type="password" class="settings-input" placeholder="AIza..." autocomplete="off" />
+        <p class="settings-hint">Works for all models above. Get one at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>.</p>
+
+        <div class="settings-actions">
+          <button id="save-keys-btn" class="save-key-btn">Save</button>
+          <button id="clear-keys-btn" class="clear-key-btn">Clear All</button>
+        </div>
+        <p id="key-status" class="key-status hidden"></p>
+        <button id="settings-back-btn" class="new-btn">← Back</button>
+      </div>
+    </div>
+
+    <!-- Not on ChatGPT page -->
+    <div id="wrong-page-section" class="hidden">
+      <div class="info-box">
+        <span class="info-icon">💬</span>
+        <p>Navigate to a <strong>ChatGPT</strong>, <strong>Claude</strong>, <strong>DeepSeek</strong>,
+          <strong>Grok</strong>, or <strong>Gemini</strong> conversation, then click this extension to summarize it.
+        </p>
+      </div>
+    </div>
+
+    <!-- Ready to summarize -->
+    <div id="ready-section" class="hidden">
+      <button id="summarize-btn">
+        <span class="btn-icon">✦</span>
+        <span id="btn-text">Summarize Conversation</span>
+        <span id="btn-loader" class="loader hidden"></span>
+      </button>
+      <button id="full-chat-btn" class="full-chat-btn">
+        <span class="btn-icon">📄</span>
+        <span id="full-chat-btn-text">View Full Chat</span>
+        <span id="full-chat-loader" class="loader hidden"></span>
+      </button>
+    </div>
+
+    <!-- Loading status -->
+    <div id="status-section" class="hidden">
+      <div class="status-box">
+        <div class="status-spinner"></div>
+        <p id="status-text">Extracting conversation...</p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="error-section" class="hidden">
+      <div class="error-box">
+        <span class="error-icon">⚠</span>
+        <p id="error-text"></p>
+      </div>
+      <button id="retry-btn" class="retry-btn">Try Again</button>
+    </div>
+
+    <!-- Result -->
+    <div id="result-section" class="hidden">
+      <div class="stats-row">
+        <div class="stat">
+          <span class="stat-label">Original</span>
+          <span id="original-tokens" class="stat-value strikethrough">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Capsule</span>
+          <span id="capsule-tokens" class="stat-value highlight">0</span>
+        </div>
+        <div class="stat savings">
+          <span id="savings" class="stat-value">-0%</span>
+        </div>
+      </div>
+      <div class="result-box">
+        <textarea id="result-text" readonly></textarea>
+      </div>
+      <button id="copy-btn" class="copy-btn">
+        <span id="copy-text">📋 Copy Briefing</span>
+      </button>
+      <button id="new-btn" class="new-btn">Summarize again</button>
+    </div>
+
+    <!-- Full Chat View -->
+    <div id="full-chat-section" class="hidden">
+      <div class="full-chat-header">
+        <span class="full-chat-label">Full Conversation</span>
+        <span id="full-chat-char-count" class="full-chat-meta"></span>
+      </div>
+      <div class="result-box">
+        <textarea id="full-chat-text" readonly></textarea>
+      </div>
+      <div class="full-chat-actions">
+        <button id="copy-chat-btn" class="copy-btn">
+          <span id="copy-chat-text">📋 Copy to Clipboard</span>
+        </button>
+        <button id="download-chat-btn" class="download-btn">
+          <span>⬇ Download .txt</span>
+        </button>
+      </div>
+      <button id="back-btn" class="new-btn">← Back</button>
+    </div>
+  </div>
+
+  <script src="logger.js"></script>
+  <script src="popup.js"></script>
+</body>
+
+</html>
