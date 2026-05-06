@@ -5,18 +5,18 @@
 }
 
 :root {
-  --bg: #0a0a0f;
-  --surface: #12121a;
-  --border: rgba(255, 255, 255, 0.08);
-  --text: #e4e4e7;
-  --text-muted: #71717a;
-  --primary: #8b5cf6;
-  --primary-hover: #7c3aed;
-  --danger: #f87171;
-  --danger-bg: rgba(248, 113, 113, 0.1);
-  --success: #34d399;
-  --success-bg: rgba(52, 211, 153, 0.1);
-  --info-bg: rgba(139, 92, 246, 0.08);
+  --bg: #0d0d0d;
+  --surface: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.06);
+  --text: #ececec;
+  --text-muted: #6b7280;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.1);
+  --info-bg: rgba(79, 70, 229, 0.08);
   --radius: 12px;
 }
 
@@ -464,8 +464,8 @@ select.settings-input {
 
 .copy-btn {
   width: 100%;
-  background: rgba(139, 92, 246, 0.15);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(79, 70, 229, 0.15);
+  border: 1px solid rgba(79, 70, 229, 0.3);
   color: var(--primary);
   padding: 10px;
   border-radius: var(--radius);
@@ -474,6 +474,15 @@ select.settings-input {
   cursor: pointer;
   transition: all 0.2s;
   letter-spacing: 0.01em;
+}
+
+.result-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.result-actions .new-btn {
+  flex: 1;
 }
 
 .copy-btn:hover {

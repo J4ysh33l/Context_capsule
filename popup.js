@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const errorText = document.getElementById("error-text");
   const resultSection = document.getElementById("result-section");
   const resultText = document.getElementById("result-text");
+  const resultBackBtn = document.getElementById("result-back-btn");
   const summarizeBtn = document.getElementById("summarize-btn");
   const btnText = document.getElementById("btn-text");
   const btnLoader = document.getElementById("btn-loader");
@@ -214,6 +215,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   summarizeBtn.addEventListener("click", handleSummarize);
   retryBtn.addEventListener("click", handleSummarize);
   newBtn.addEventListener("click", () => {
+    hideAll();
+    readySection.classList.remove("hidden");
+  });
+  resultBackBtn.addEventListener("click", () => {
     hideAll();
     readySection.classList.remove("hidden");
   });
