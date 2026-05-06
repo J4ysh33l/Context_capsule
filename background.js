@@ -5,12 +5,12 @@ importScripts('logger.js');
 
 const WORKER_URL = 'https://contextcapsule-worker.contextcapsule-app.workers.dev/api/summarize';
 
-const BRIEFING_PROMPT =
-  'Summarize the following conversation into a concise context briefing. ' +
-  'Output ONLY the briefing — no preamble, no meta-commentary, no "Role:", "Task:", "Input:", "Dense?", or similar lines. ' +
-  'Do not repeat the summary. Structure it with clear sections covering: key decisions, technical details, action items, and outcomes. ' +
-  'Be token-efficient. Do not add any information not present in the conversation.\n\n' +
-  'CONVERSATION:\n';
+const SYSTEM_INSTRUCTION =
+  'You are a context compressor. When given a conversation, write a concise briefing covering: ' +
+  'key decisions, technical details, action items, and outcomes. ' +
+  'Start writing the briefing immediately — no preamble, no labels, no meta-commentary.';
+
+const BRIEFING_PROMPT = 'Summarize this conversation:\n\n';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'summarize') {
@@ -56,14 +56,14 @@ function estimateTokens(text) {
 
 async function callGeminiDirect(conversationText, apiKey, model) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const prompt = BRIEFING_PROMPT + conversationText;
 
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        contents: [{ parts: [{ text: BRIEFING_PROMPT + conversationText }] }],
         generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
       }),
     });
@@ -114,7 +114,10 @@ async function callOpenAIDirect(conversationText, baseUrl, apiKey, model) {
       headers,
       body: JSON.stringify({
         model,
-        messages: [{ role: 'user', content: BRIEFING_PROMPT + conversationText }],
+        messages: [
+          { role: 'system', content: SYSTEM_INSTRUCTION },
+          { role: 'user', content: BRIEFING_PROMPT + conversationText },
+        ],
         temperature: 0.3,
         max_tokens: 2048,
       }),
