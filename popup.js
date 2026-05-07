@@ -317,13 +317,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     showPage("home");
     // Refresh active model label
     chrome.storage.local.get(["activeProvider", "providers"]).then((data) => {
-      const provider = data.activeProvider || "worker";
-      if (provider === "worker") {
-        homeModelLabel.textContent = "shared worker";
-      } else {
-        const model = data.providers?.[provider]?.model || "";
-        homeModelLabel.textContent = model || provider;
-      }
+      const provider = data.activeProvider || "gemini";
+      const model = data.providers?.[provider]?.model || "";
+      homeModelLabel.textContent = model || provider;
     });
     cardTitle.textContent = currentPlatformLabel + " conversation";
     // Pre-extract transcript in background to populate counts + warm cache
@@ -437,7 +433,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ────────────────────────────────
 
   const PROVIDER_CONFIGS = {
-    worker:   { needsKey: false, needsUrl: false, defaultModels: [] },
     gemini:   { needsKey: true,  needsUrl: false, hint: "aistudio.google.com", defaultModels: ["gemma-4-26b-a4b-it", "gemini-2.5-flash", "gemini-2.5-flash-lite"] },
     openai:   { needsKey: true,  needsUrl: false, hint: "platform.openai.com", defaultUrl: "https://api.openai.com/v1", defaultModels: ["gpt-4.1-mini", "gpt-4.1", "gpt-4o"] },
     groq:     { needsKey: true,  needsUrl: false, hint: "console.groq.com",    defaultUrl: "https://api.groq.com/openai/v1", defaultModels: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"] },
@@ -458,12 +453,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       baseUrlRow.classList.add("hidden");
     }
-    if (provider === "worker") {
-      modelRow.classList.add("hidden");
-    } else {
-      modelRow.classList.remove("hidden");
-      populateDefaultModels(provider, cfg?.model);
-    }
+    modelRow.classList.remove("hidden");
+    populateDefaultModels(provider, cfg?.model);
   }
 
   function populateDefaultModels(provider, selectedModel) {
@@ -507,7 +498,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       data.providers = migrated.providers;
       logger.info("popup", "Migrated legacy Gemini key");
     }
-    const activeProvider = data.activeProvider || "worker";
+    const activeProvider = data.activeProvider || "gemini";
     const providers = data.providers || {};
     const cfg = providers[activeProvider] || {};
     providerSelect.value  = activeProvider;
@@ -580,11 +571,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   clearKeysBtn.addEventListener("click", async () => {
     await chrome.storage.local.remove(["activeProvider", "providers", "geminiApiKey", "selectedModel"]);
-    providerSelect.value = "worker";
+    providerSelect.value = "gemini";
     apiKeyInput.value    = "";
     baseUrlInput.value   = "";
-    applyProviderUI("worker", null);
+    applyProviderUI("gemini", null);
     logger.info("popup", "Settings cleared");
-    showKeyStatus("Cleared. Using shared Worker.", "success");
+    showKeyStatus("Cleared.", "success");
   });
 });

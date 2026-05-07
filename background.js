@@ -1,5 +1,5 @@
 // background.js
-// Receives extracted text from popup and routes to configured provider or shared Worker
+// Receives extracted text from popup and routes to configured API provider (Gemini, OpenAI, Groq, LMStudio)
 
 importScripts('logger.js');
 

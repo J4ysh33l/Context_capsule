@@ -123,11 +123,10 @@ When popup sends `summarize` message, background.js:
 - Your personal quota and billing
 - Real token counts from provider's metadata
 
-#### Path B: Shared Worker API (default, no key needed)
-- Endpoint: `https://contextcapsule-worker.contextcapsule-app.workers.dev/api/summarize`
-- Request: `{ conversationText, mode: 'dense', platform }`
-- Response: `{ success, capsule, originalTokens, capsuleTokens, error }`
-- Shared quota across all users; no billing
+#### Path B: OpenAI-compatible API
+- Supports Groq, LMStudio, or any OpenAI-compatible endpoint
+- Send API key and base URL in settings
+- Real token counts from provider's metadata
 
 ---
 
@@ -144,11 +143,10 @@ When popup sends `summarize` message, background.js:
 Click gear icon in popup to open settings:
 
 **Provider options:**
-- **Shared Worker** — no key needed, default
-- **Google Gemini** — paste API key
-- **OpenAI** — paste API key
-- **Groq** — paste API key
-- **LM Studio (local)** — point to local server
+- **Google Gemini** — paste API key from aistudio.google.com
+- **OpenAI** — paste API key from platform.openai.com
+- **Groq** — paste API key from console.groq.com
+- **LM Studio (local)** — point to local server (http://localhost:1234/v1)
 
 For providers requiring key:
 - Paste API key in **API Key** field
@@ -190,10 +188,11 @@ Settings stored in `chrome.storage.local`.
 2. Test against live chat — verify DOM selectors still work
 3. Extraction is resilient — Strategy B/C act as fallbacks if A fails
 
-### Changing API Endpoint
+### Changing API Provider
 
-1. Update `WORKER_URL` in `background.js`
-2. Verify response schema matches expectations in `popup.js`
+1. Add new provider handler in `background.js` (model callGeminiDirect/callOpenAIDirect)
+2. Add provider config to `PROVIDER_CONFIGS` in `popup.js`
+3. Verify request/response schema matches the API's format
 
 ---
 
@@ -206,7 +205,7 @@ Settings stored in `chrome.storage.local`.
 | `popup.js` | UI logic, state machine, platform detection |
 | `popup.css` | UI styling |
 | `content.js` | DOM extraction engine (900+ lines), platform strategies |
-| `background.js` | Service worker, API bridge, message routing |
+| `background.js` | Service worker, API routing (Gemini/OpenAI-compatible/LMStudio) |
 | `logger.js` | Structured logging, ring buffer, session storage |
 
 ---
@@ -247,6 +246,6 @@ Extension is published to Chrome Web Store (Manifest V3). To publish new version
 ## Notes
 
 - Extraction selectors are DOM-dependent — can break on platform UI updates (strategies B/C act as fallbacks)
-- Worker API is external — extension handles downtime gracefully
+- API provider is external — extension handles downtime gracefully
 - No personal data is logged or persisted beyond extension storage
 - Conversations sent to API are processed and not stored
