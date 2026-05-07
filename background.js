@@ -6,10 +6,16 @@ importScripts('logger.js');
 const WORKER_URL = 'https://contextcapsule-worker.contextcapsule-app.workers.dev/api/summarize';
 
 const BRIEFING_PROMPT =
-  'Summarize the following conversation into a concise context briefing. ' +
-  'Output ONLY the briefing — no preamble, no meta-commentary, no "Role:", "Task:", "Input:", "Dense?", or similar lines. ' +
-  'Do not repeat the summary. Structure it with clear sections covering: key decisions, technical details, action items, and outcomes. ' +
-  'Be token-efficient. Do not add any information not present in the conversation.\n\n' +
+  'You are creating a conversation handoff document. Goal: a new AI session reading this should have enough context to continue seamlessly — no information loss, no re-explanation needed.\n\n' +
+  'Output format:\n' +
+  '1. TOPIC & GOAL — What this conversation is about and what the human is trying to achieve\n' +
+  '2. FULL CONTEXT — Background, constraints, preferences, and any domain knowledge established\n' +
+  '3. DECISIONS MADE — Every concluded decision, with the reasoning behind it\n' +
+  '4. WORK DONE — All outputs, code, documents, or artifacts produced (include verbatim if short, summarize structure if long)\n' +
+  '5. OPEN THREADS — Unresolved questions, pending decisions, next steps\n' +
+  '6. HUMAN PREFERENCES — Tone, style, format preferences observed in this conversation\n' +
+  '7. KEY FACTS — Names, numbers, dates, URLs, file paths, technical specs — exact values only\n\n' +
+  'Be exhaustive, not concise. Omit nothing that affects continuity.\n\n' +
   'CONVERSATION:\n';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

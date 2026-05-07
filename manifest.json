@@ -1,25 +1,36 @@
 {
-   "action": {
-      "default_icon": {
-         "128": "icons/icon128.png",
-         "16": "icons/icon16.png",
-         "48": "icons/icon48.png"
-      },
-      "default_popup": "popup.html"
-   },
-   "background": {
-      "service_worker": "background.js"
-   },
-   "description": "Compress ChatGPT, Claude, DeepSeek, Grok, & Gemini conversations into token-efficient context briefings.",
-   "host_permissions": [ "https://chatgpt.com/*", "https://claude.ai/*", "https://chat.deepseek.com/*", "https://grok.com/*", "https://x.com/*", "https://gemini.google.com/*", "https://generativelanguage.googleapis.com/*", "https://api.openai.com/*", "https://api.groq.com/*", "http://localhost:1234/*" ],
-   "icons": {
+  "action": {
+    "default_icon": {
       "128": "icons/icon128.png",
       "16": "icons/icon16.png",
       "48": "icons/icon48.png"
-   },
-   "manifest_version": 3,
-   "name": "ContextCapsule",
-   "permissions": [ "activeTab", "scripting", "storage" ],
-   "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "1.3.0"
+    },
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "description": "Compress ChatGPT, Claude, DeepSeek, Grok, & Gemini conversations into token-efficient context briefings.",
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://chat.deepseek.com/*",
+    "https://grok.com/*",
+    "https://x.com/*",
+    "https://gemini.google.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.openai.com/*",
+    "https://api.groq.com/*",
+    "http://localhost:1234/*"
+  ],
+  "icons": {
+    "128": "icons/icon128.png",
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png"
+  },
+  "manifest_version": 3,
+  "name": "ContextCapsule",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "update_url": "https://clients2.google.com/service/update2/crx",
+  "version": "1.4.5"
 }

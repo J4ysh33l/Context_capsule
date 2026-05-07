@@ -4,148 +4,252 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description"
-    content="Summarize ChatGPT and Claude conversations into token-efficient context briefings." />
   <link rel="stylesheet" href="popup.css" />
 </head>
 
 <body>
-  <div class="container">
-    <header>
-      <div class="logo">
-        <span class="logo-icon">✦</span>
-        <span class="logo-text">ContextCapsule</span>
-      </div>
-      <button id="settings-btn" class="settings-btn" title="Settings">⚙</button>
-    </header>
 
-    <!-- Settings panel -->
-    <div id="settings-section" class="hidden">
-      <div class="settings-panel">
-        <label class="settings-label" for="provider-select">Provider</label>
-        <select id="provider-select" class="settings-input">
+  <!-- ── HEADER ── -->
+  <header class="app-header">
+    <div class="header-left">
+      <button id="back-btn" class="back-btn hidden">‹</button>
+      <span class="header-wordmark">Context Capsule</span>
+    </div>
+    <button id="settings-btn" class="settings-icon-btn" title="Settings">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="1.3"/>
+        <path d="M13.3 6.7l-.7-1.7-1.2.4a4.5 4.5 0 00-.8-.8l.4-1.2-1.7-.7-.7 1.1a4.5 4.5 0 00-1.1 0L7 2.7 5.3 3.4l.4 1.2a4.5 4.5 0 00-.8.8L3.7 5l-.7 1.7 1.1.7a4.5 4.5 0 000 1.1L3 9.3l.7 1.7 1.2-.4c.2.3.5.6.8.8L5.3 12.6l1.7.7.7-1.1a4.5 4.5 0 001.1 0l.7 1.1 1.7-.7-.4-1.2a4.5 4.5 0 00.8-.8l1.2.4.7-1.7-1.1-.7a4.5 4.5 0 000-1.1l1.1-.7z" stroke="currentColor" stroke-width="1.3"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- ══════════════════════════════════
+       HOME — supported page, ready
+  ══════════════════════════════════ -->
+  <div id="home-page" class="page">
+    <h1 class="home-headline">A quiet way to <em>compress</em> chats.</h1>
+
+    <div class="conversation-card">
+      <div class="card-header">
+        <span class="card-detected">Detected on this page</span>
+        <span class="live-badge">
+          <span class="live-dot"></span>
+          live
+        </span>
+      </div>
+      <div id="card-title" class="card-title">Loading…</div>
+      <div class="card-meta">
+        <span id="card-messages"></span>
+        <span id="card-tokens"></span>
+      </div>
+    </div>
+
+    <button id="summarize-btn" class="summarize-btn">
+      <span class="summarize-btn-label">
+        Summarize <em>conversation</em>
+      </span>
+      <span class="summarize-btn-arrow">→</span>
+    </button>
+
+    <button id="full-chat-btn" class="transcript-btn">
+      <span>View full transcript</span>
+      <span id="transcript-char-hint" class="transcript-char-count"></span>
+    </button>
+
+    <div class="home-footer">
+      <span id="home-model-label"></span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       EMPTY STATE — unsupported page
+  ══════════════════════════════════ -->
+  <div id="empty-page" class="empty-page hidden">
+    <div class="empty-icon">∅</div>
+    <h2 class="empty-title">Nothing to capture<br>just yet.</h2>
+    <p class="empty-body">Open a chat in ChatGPT, Claude, DeepSeek, Grok, or Gemini, then come back.</p>
+    <div class="empty-links">
+      <span>claude.ai</span>
+      <span>·</span>
+      <span>chatgpt.com</span>
+      <span>·</span>
+      <span>gemini.google.com</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       LOADING — summarize in progress
+  ══════════════════════════════════ -->
+  <div id="loading-page" class="loading-page hidden">
+    <div class="loading-title">Distilling</div>
+
+    <div class="loading-body">
+      <span class="loading-label">Winding back the clock</span>
+
+      <!-- Animated analog clock -->
+      <div class="clock-wrapper">
+        <svg class="clock-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle class="clock-face" cx="50" cy="50" r="44"/>
+          <!-- tick marks at 12, 3, 6, 9 -->
+          <line class="clock-tick" x1="50" y1="8"  x2="50" y2="16"/>
+          <line class="clock-tick" x1="92" y1="50" x2="84" y2="50"/>
+          <line class="clock-tick" x1="50" y1="92" x2="50" y2="84"/>
+          <line class="clock-tick" x1="8"  y1="50" x2="16" y2="50"/>
+          <!-- hour hand -->
+          <line class="clock-hand-hour" x1="50" y1="50" x2="50" y2="24"/>
+          <!-- minute hand -->
+          <line class="clock-hand-min"  x1="50" y1="50" x2="50" y2="16"/>
+          <!-- center dot -->
+          <circle class="clock-center" cx="50" cy="50" r="2.5"/>
+        </svg>
+      </div>
+
+      <span id="loading-status" class="loading-status">compressing prose …</span>
+
+      <div class="loading-progress-bar">
+        <div id="loading-progress-fill" class="loading-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="loading-footer">
+      <span id="loading-tokens-in" class="loading-footer-left"></span>
+      <span id="loading-est-out"   class="loading-footer-center"></span>
+      <span id="loading-savings"   class="loading-footer-right"></span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       RESULT — briefing ready
+  ══════════════════════════════════ -->
+  <div id="result-page" class="result-page hidden">
+    <div class="result-title-bar">
+      <h2 class="result-title">The <em>briefing</em></h2>
+      <span id="result-savings" class="result-savings"></span>
+    </div>
+
+    <div class="result-token-row">
+      <span id="result-tokens-main" class="result-tokens-main"></span>
+      <span class="result-tokens-unit">tks</span>
+      <span id="result-tokens-from" class="result-tokens-from"></span>
+    </div>
+
+    <textarea id="result-text" class="result-content" readonly></textarea>
+
+    <div class="result-actions-pinned">
+      <button id="copy-btn" class="copy-briefing-btn">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 10V3a1 1 0 011-1h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span id="copy-btn-text">Copy briefing</span>
+      </button>
+      <div class="result-secondary-row">
+        <button id="regen-btn"  class="ghost-btn">Regenerate</button>
+        <button id="result-back-btn" class="ghost-btn">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       FULL TRANSCRIPT
+  ══════════════════════════════════ -->
+  <div id="transcript-page" class="transcript-page hidden">
+    <div class="transcript-title-bar">
+      <h2 class="transcript-title"><em>Full</em> transcript</h2>
+      <div id="transcript-meta" class="transcript-meta-row hidden">
+        <span id="transcript-chars"></span>
+        <span>·</span>
+        <span id="transcript-words"></span>
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div id="transcript-skeleton" class="hidden">
+      <div class="transcript-loading-label">reading page</div>
+      <div class="skeleton-block">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <textarea id="transcript-text" class="transcript-content hidden" readonly></textarea>
+
+    <div class="transcript-actions-pinned">
+      <button id="copy-transcript-btn" class="outline-btn">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 10V3a1 1 0 011-1h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span id="copy-transcript-text">Copy</span>
+      </button>
+      <button id="download-btn" class="outline-btn">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v7M4 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span id="download-btn-text">Download</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       ERROR
+  ══════════════════════════════════ -->
+  <div id="error-page" class="error-page hidden">
+    <div class="error-box">
+      <span class="error-icon">⚠</span>
+      <p id="error-text" class="error-text"></p>
+    </div>
+    <button id="retry-btn" class="retry-btn">Try again</button>
+    <button id="error-back-btn" class="ghost-btn">← Back</button>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SETTINGS
+  ══════════════════════════════════ -->
+  <div id="settings-page" class="settings-page hidden">
+    <div class="settings-title-bar">
+      <h2 class="settings-title">Settings</h2>
+    </div>
+
+    <div class="settings-body">
+      <div class="field-group">
+        <label class="field-label" for="provider-select">Provider</label>
+        <select id="provider-select" class="field-input">
           <option value="worker">Shared Worker (no key needed)</option>
           <option value="gemini">Google Gemini</option>
           <option value="openai">OpenAI</option>
           <option value="groq">Groq</option>
           <option value="lmstudio">LM Studio (local)</option>
         </select>
+      </div>
 
-        <div id="api-key-row">
-          <label class="settings-label" for="api-key-input">API Key</label>
-          <input id="api-key-input" type="password" class="settings-input" placeholder="Paste key..." autocomplete="off" />
-          <p id="api-key-hint" class="settings-hint"></p>
-        </div>
+      <div id="api-key-row" class="field-group hidden">
+        <label class="field-label" for="api-key-input">API Key</label>
+        <input id="api-key-input" type="password" class="field-input" placeholder="Paste key…" autocomplete="off" />
+        <p id="api-key-hint" class="field-hint"></p>
+      </div>
 
-        <div id="base-url-row" class="hidden">
-          <label class="settings-label" for="base-url-input">Base URL</label>
-          <input id="base-url-input" type="text" class="settings-input" />
-        </div>
+      <div id="base-url-row" class="field-group hidden">
+        <label class="field-label" for="base-url-input">Base URL</label>
+        <input id="base-url-input" type="text" class="field-input" />
+      </div>
 
-        <div id="model-row">
-          <label class="settings-label" for="model-select">Model</label>
-          <div class="model-row-inline">
-            <select id="model-select" class="settings-input"></select>
-            <button id="fetch-models-btn" class="fetch-btn">Fetch</button>
-          </div>
-          <p id="model-status" class="settings-hint hidden"></p>
+      <div id="model-row" class="field-group hidden">
+        <label class="field-label" for="model-select">Model</label>
+        <div class="model-row-inline">
+          <select id="model-select" class="field-input"></select>
+          <button id="fetch-models-btn" class="fetch-btn">Fetch</button>
         </div>
-
-        <div class="settings-actions">
-          <button id="save-keys-btn" class="save-key-btn">Save</button>
-          <button id="clear-keys-btn" class="clear-key-btn">Clear All</button>
-        </div>
-        <p id="key-status" class="key-status hidden"></p>
-        <button id="settings-back-btn" class="new-btn">← Back</button>
+        <p id="model-status" class="field-status hidden"></p>
       </div>
     </div>
 
-    <!-- Not on ChatGPT page -->
-    <div id="wrong-page-section" class="hidden">
-      <div class="info-box">
-        <span class="info-icon">💬</span>
-        <p>Navigate to a <strong>ChatGPT</strong>, <strong>Claude</strong>, <strong>DeepSeek</strong>,
-          <strong>Grok</strong>, or <strong>Gemini</strong> conversation, then click this extension to summarize it.
-        </p>
-      </div>
-    </div>
+    <p id="key-status" class="key-status hidden"></p>
 
-    <!-- Ready to summarize -->
-    <div id="ready-section" class="hidden">
-      <button id="summarize-btn">
-        <span class="btn-icon">✦</span>
-        <span id="btn-text">Summarize Conversation</span>
-        <span id="btn-loader" class="loader hidden"></span>
-      </button>
-      <button id="full-chat-btn" class="full-chat-btn">
-        <span class="btn-icon">📄</span>
-        <span id="full-chat-btn-text">View Full Chat</span>
-        <span id="full-chat-loader" class="loader hidden"></span>
-      </button>
-    </div>
-
-    <!-- Loading status -->
-    <div id="status-section" class="hidden">
-      <div class="status-box">
-        <div class="status-spinner"></div>
-        <p id="status-text">Extracting conversation...</p>
-      </div>
-    </div>
-
-    <!-- Error -->
-    <div id="error-section" class="hidden">
-      <div class="error-box">
-        <span class="error-icon">⚠</span>
-        <p id="error-text"></p>
-      </div>
-      <button id="retry-btn" class="retry-btn">Try Again</button>
-    </div>
-
-    <!-- Result -->
-    <div id="result-section" class="hidden">
-      <div class="stats-row">
-        <div class="stat">
-          <span class="stat-label">Original</span>
-          <span id="original-tokens" class="stat-value strikethrough">0</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Capsule</span>
-          <span id="capsule-tokens" class="stat-value highlight">0</span>
-        </div>
-        <div class="stat savings">
-          <span id="savings" class="stat-value">-0%</span>
-        </div>
-      </div>
-      <div class="result-box">
-        <textarea id="result-text" readonly></textarea>
-      </div>
-      <button id="copy-btn" class="copy-btn">
-        <span id="copy-text">📋 Copy Briefing</span>
-      </button>
-      <div class="result-actions">
-        <button id="new-btn" class="new-btn">Summarize again</button>
-        <button id="result-back-btn" class="new-btn">← Back</button>
-      </div>
-    </div>
-
-    <!-- Full Chat View -->
-    <div id="full-chat-section" class="hidden">
-      <div class="full-chat-header">
-        <span class="full-chat-label">Full Conversation</span>
-        <span id="full-chat-char-count" class="full-chat-meta"></span>
-      </div>
-      <div class="result-box">
-        <textarea id="full-chat-text" readonly></textarea>
-      </div>
-      <div class="full-chat-actions">
-        <button id="copy-chat-btn" class="copy-btn">
-          <span id="copy-chat-text">📋 Copy to Clipboard</span>
-        </button>
-        <button id="download-chat-btn" class="download-btn">
-          <span>⬇ Download .txt</span>
-        </button>
-      </div>
-      <button id="back-btn" class="new-btn">← Back</button>
+    <div class="settings-actions-pinned">
+      <button id="save-keys-btn" class="save-btn">Save</button>
+      <button id="clear-keys-btn" class="clear-btn">Clear</button>
     </div>
   </div>
 
