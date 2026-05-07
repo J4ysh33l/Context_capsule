@@ -3,8 +3,6 @@
 
 importScripts('logger.js');
 
-const WORKER_URL = 'https://contextcapsule-worker.contextcapsule-app.workers.dev/api/summarize';
-
 const BRIEFING_PROMPT =
   'You are creating a conversation handoff document. Goal: a new AI session reading this should have enough context to continue seamlessly — no information loss, no re-explanation needed.\n\n' +
   'Output format:\n' +
@@ -52,8 +50,8 @@ async function handleSummarize(conversationText, platform = 'chatgpt') {
     return callOpenAIDirect(conversationText, cfg.baseUrl, cfg.apiKey, cfg.model);
   }
 
-  logger.info('background', 'Routing to shared Worker API', { platform });
-  return callWorkerApi(conversationText, platform);
+  logger.error('background', 'No active provider configured', { activeProvider });
+  return { success: false, error: 'No API provider configured. Please set up Gemini, OpenAI, Groq, or LMStudio in Settings.' };
 }
 
 function estimateTokens(text) {
@@ -210,45 +208,3 @@ async function fetchModels(provider, baseUrl, apiKey) {
   }
 }
 
-async function callWorkerApi(conversationText, platform) {
-  try {
-    const response = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        conversationText,
-        mode: 'dense',
-        platform: platform || 'chatgpt',
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      logger.warn('background', 'Worker API returned an error', {
-        status: response.status,
-        error: data.error,
-        message: data.message,
-      });
-      return { success: false, error: data.message || 'Worker API returned an error.' };
-    }
-
-    logger.info('background', 'Worker API success', {
-      originalTokens: data.originalTokens,
-      capsuleTokens: data.capsuleTokens,
-    });
-
-    return {
-      success: true,
-      capsule: data.capsule,
-      originalTokens: data.originalTokens,
-      capsuleTokens: data.capsuleTokens,
-    };
-  } catch (err) {
-    logger.error('background', 'Network or fetch failure', { error: err.message });
-    return {
-      success: false,
-      error: 'Could not reach the ContextCapsule API. Please check your internet connection and try again.',
-    };
-  }
-}

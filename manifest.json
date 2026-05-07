@@ -31,6 +31,5 @@
   "manifest_version": 3,
   "name": "ContextCapsule",
   "permissions": ["activeTab", "scripting", "storage"],
-  "update_url": "https://clients2.google.com/service/update2/crx",
   "version": "1.4.6"
 }
