@@ -65,6 +65,11 @@
     return best || null;
   }
 
+  // ── Dedup Helper ─────────────────────────────────────────────────────────
+  function dedupeByAncestor(nodes) {
+    return nodes.filter((n, _, arr) => !arr.some(o => o !== n && o.contains(n)));
+  }
+
   // ── XPath Helper ──────────────────────────────────────────────────────────
   /**
    * Evaluate an XPath expression and return all matching elements.
@@ -140,14 +145,12 @@
   function chatgptStrategyC() {
     const nodes = xpathAll(".//div[contains(@class,'group') and string-length(normalize-space(.)) > 30]", getContext());
     // Deduplicate nested containers by checking parent containment
-    const deduped = nodes.filter((node, _i, arr) =>
-      !arr.some((other) => other !== node && other.contains(node))
-    );
+    const deduped = dedupeByAncestor(nodes);
     if (!deduped.length) return null;
     const turns = [];
     deduped.forEach((el, i) => {
       const text = el.innerText?.trim() ?? '';
-      if (text.length > 10) turns.push(`[${i % 2 === 0 ? 'user' : 'assistant'}]: ${text}`);
+      if (text) turns.push(`[${i % 2 === 0 ? 'user' : 'assistant'}]: ${text}`);
     });
     return turns.join('\n\n') || null;
   }
@@ -271,9 +274,7 @@
     const nodes = xpathAll(
       ".//article | .//section | .//*[@role='article'] | .//p[string-length(normalize-space(.)) > 20]", getContext()
     );
-    const deduped = nodes.filter((node, _, arr) =>
-      !arr.some((other) => other !== node && other.contains(node))
-    );
+    const deduped = dedupeByAncestor(nodes);
     if (!deduped.length) return null;
     const seen = new Set();
     const turns = [];
@@ -375,9 +376,7 @@
       ".//*[contains(@class,'query') or contains(@class,'response') or contains(@class,'message') or contains(@class,'prompt')]" +
       "[string-length(normalize-space(.)) > 20]", getContext()
     );
-    const deduped = nodes.filter((node, _, arr) =>
-      !arr.some((other) => other !== node && other.contains(node))
-    );
+    const deduped = dedupeByAncestor(nodes);
     if (!deduped.length) return null;
     const seen = new Set();
     const turns = [];
@@ -429,6 +428,8 @@
     JITTER_FACTOR: 0.2,   // ±20% of the delay
     MIN_SUCCESS_CHARS: 100,
     SPA_WAIT_MS: 5000,    // per-attempt SPA polling cap
+    SPA_POLL_MS: 500,     // interval between SPA content checks
+    GRACE_MS: 750,        // initial delay before first check
   };
 
   function sleep(ms) {
@@ -458,10 +459,9 @@
           resolve(text || '');
           return;
         }
-        setTimeout(check, 500);
+        setTimeout(check, RETRY_CONFIG.SPA_POLL_MS);
       }
-      // Give the SPA an initial 1.5 s grace period before first check
-      setTimeout(check, 750);
+      setTimeout(check, RETRY_CONFIG.GRACE_MS);
     });
   }
 

@@ -1,3 +1,20 @@
+function estimateTokens(text) {
+  return Math.round(text.length / 4);
+}
+
+async function injectContentScript(tabId) {
+  await chrome.scripting.executeScript({ target: { tabId }, files: ["logger.js", "content.js"] });
+}
+
+function showCopyFeedback(btnEl, btnTextEl, revertLabel = "Copy") {
+  btnTextEl.textContent = "Copied!";
+  btnEl.classList.add("copied");
+  setTimeout(() => {
+    btnTextEl.textContent = revertLabel;
+    btnEl.classList.remove("copied");
+  }, 2000);
+}
+
 window.addEventListener("error", (e) => {
   console.error("[ContextCapsule popup error]", e.error || e.message);
   const home = document.getElementById("home-page");
@@ -143,26 +160,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ── Copy briefing ──
   copyBtn.addEventListener("click", () => {
-    navigator.clipboard.writeText(resultText.value).then(() => {
-      copyBtn.classList.add("copied");
-      copyBtnText.textContent = "Copied!";
-      setTimeout(() => {
-        copyBtn.classList.remove("copied");
-        copyBtnText.textContent = "Copy briefing";
-      }, 2000);
-    });
+    navigator.clipboard.writeText(resultText.value).then(() => showCopyFeedback(copyBtn, copyBtnText, "Copy briefing"));
   });
 
   // ── Copy transcript ──
   copyTranscriptBtn.addEventListener("click", () => {
-    navigator.clipboard.writeText(transcriptTextEl.value).then(() => {
-      copyTranscriptBtn.classList.add("copied");
-      copyTranscriptText.textContent = "Copied!";
-      setTimeout(() => {
-        copyTranscriptBtn.classList.remove("copied");
-        copyTranscriptText.textContent = "Copy";
-      }, 2000);
-    });
+    navigator.clipboard.writeText(transcriptTextEl.value).then(() => showCopyFeedback(copyTranscriptBtn, copyTranscriptText));
   });
 
   // ── Download transcript ──
@@ -189,7 +192,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Show input token count immediately if cached
     if (lastExtractedText) {
-      const cachedTokens = Math.round(lastExtractedText.length / 4);
+      const cachedTokens = estimateTokens(lastExtractedText);
       const estOut = Math.round(cachedTokens * 0.1);
       loadingTokensIn.textContent = `${cachedTokens.toLocaleString()} in`;
       loadingEstOut.textContent   = `est ~${estOut.toLocaleString()} out`;
@@ -204,7 +207,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (lastExtractedText) {
         extracted = { success: true, text: lastExtractedText, platform: currentPlatformLabel.toLowerCase() };
       } else {
-        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["logger.js", "content.js"] });
+        await injectContentScript(tab.id);
         extracted = await extractWithTimeout();
       }
 
@@ -224,7 +227,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
 
-      const estimatedTokens = Math.round(extracted.text.length / 4);
+      const estimatedTokens = estimateTokens(extracted.text);
       if (estimatedTokens < 160) {
         showError(`Conversation too short (~${estimatedTokens} tokens). Need at least 160 tokens.`);
         return;
@@ -275,7 +278,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     transcriptMeta.classList.add("hidden");
 
     try {
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["logger.js", "content.js"] });
+      await injectContentScript(tab.id);
 
       const extracted = await extractWithTimeout();
 
@@ -333,7 +336,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function preloadTranscript() {
     try {
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["logger.js", "content.js"] });
+      await injectContentScript(tab.id);
       const extracted = await extractWithTimeout();
       if (extracted?.success && extracted.text && extracted.text.length >= 50) {
         lastExtractedText = extracted.text;
@@ -346,7 +349,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function updateCardMeta(text) {
-    const tokens = Math.round(text.length / 4);
+    const tokens = estimateTokens(text);
     const messageCount = countMessages(text);
     cardMessages.textContent = `${messageCount} messages`;
     cardTokens.textContent   = `~${formatTokens(tokens)} tokens`;
@@ -391,7 +394,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     transcriptChars.textContent = `${chars} chars`;
     transcriptWords.textContent = `${words} words`;
     transcriptMeta.classList.remove("hidden");
-    const tokens = Math.round(text.length / 4);
+    const tokens = estimateTokens(text);
     transcriptCharHint.textContent = formatTokens(tokens) + "tk";
   }
 

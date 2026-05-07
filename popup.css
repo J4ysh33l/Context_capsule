@@ -453,7 +453,7 @@ body {
   color: var(--text-dim);
 }
 
-.result-content {
+.chat-content {
   flex: 1;
   overflow-y: auto;
   margin: 0 20px 12px;
@@ -467,15 +467,17 @@ body {
   color: var(--text);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 260px;
   min-height: 180px;
   resize: none;
   outline: none;
 }
 
-.result-content::-webkit-scrollbar { width: 4px; }
-.result-content::-webkit-scrollbar-track { background: transparent; }
-.result-content::-webkit-scrollbar-thumb { background: var(--border-med); border-radius: 2px; }
+.chat-content::-webkit-scrollbar { width: 4px; }
+.chat-content::-webkit-scrollbar-track { background: transparent; }
+.chat-content::-webkit-scrollbar-thumb { background: var(--border-med); border-radius: 2px; }
+
+.result-content { max-height: 260px; }
+.transcript-content { max-height: 280px; }
 
 .result-actions-pinned {
   padding: 0 20px 16px;
@@ -606,29 +608,6 @@ body {
 .skeleton-line:nth-child(9) { width: 60%; }
 .skeleton-line:nth-child(10){ width: 76%; }
 
-.transcript-content {
-  flex: 1;
-  overflow-y: auto;
-  margin: 0 20px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px 16px;
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 11px;
-  line-height: 1.75;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 280px;
-  min-height: 180px;
-  resize: none;
-  outline: none;
-}
-
-.transcript-content::-webkit-scrollbar { width: 4px; }
-.transcript-content::-webkit-scrollbar-track { background: transparent; }
-.transcript-content::-webkit-scrollbar-thumb { background: var(--border-med); border-radius: 2px; }
 
 .transcript-actions-pinned {
   padding: 0 20px 16px;
